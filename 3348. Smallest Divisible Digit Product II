@@ -1,0 +1,125 @@
+import java.util.*;
+
+class Solution {
+    public String smallestNumber(String num, long t) {
+        long temp = t;
+        int[] req = new int[10];
+        int[] primes = {2, 3, 5, 7};
+        for (int p : primes) {
+            while (temp % p == 0) {
+                req[p]++;
+                temp /= p;
+            }
+        }
+        if (temp > 1) return "-1";
+
+        int n = num.length();
+        int[] numDigits = new int[n];
+        for (int i = 0; i < n; i++) {
+            numDigits[i] = num.charAt(i) - '0';
+        }
+
+        int[][] digitPrimes = new int[10][10];
+        for (int d = 1; d <= 9; d++) {
+            int dTemp = d;
+            for (int p : primes) {
+                while (dTemp % p == 0) {
+                    digitPrimes[d][p]++;
+                    dTemp /= p;
+                }
+            }
+        }
+
+        int[][] prefixPrimes = new int[n + 1][10];
+        int firstZero = -1;
+        for (int i = 0; i < n; i++) {
+            for (int p : primes) {
+                prefixPrimes[i + 1][p] = prefixPrimes[i][p];
+            }
+            if (numDigits[i] == 0) {
+                if (firstZero == -1) firstZero = i;
+            } else {
+                for (int p : primes) {
+                    prefixPrimes[i + 1][p] += digitPrimes[numDigits[i]][p];
+                }
+            }
+        }
+
+        int maxI = (firstZero != -1) ? firstZero : n - 1;
+        for (int i = maxI; i >= 0; i--) {
+            int startD = (firstZero != -1 && i == firstZero) ? 1 : numDigits[i] + (i == n - 1 && firstZero == -1 ? 0 : 1);
+            if (i < firstZero) startD = numDigits[i] + 1;
+
+            for (int d = startD; d <= 9; d++) {
+                int[] curReq = new int[10];
+                for (int p : primes) {
+                    curReq[p] = Math.max(0, req[p] - prefixPrimes[i][p] - digitPrimes[d][p]);
+                }
+
+                int remLen = n - 1 - i;
+                if (minDigitsNeeded(curReq) <= remLen) {
+                    StringBuilder sb = new StringBuilder();
+                    for (int k = 0; k < i; k++) sb.append(numDigits[k]);
+                    sb.append(d);
+                    sb.append(constructSuffix(curReq, remLen));
+                    return sb.toString();
+                }
+            }
+        }
+
+        int[] curReq = new int[10];
+        for (int p : primes) curReq[p] = req[p];
+        int minLen = Math.max(n + 1, minDigitsNeeded(curReq));
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(constructSuffix(curReq, minLen));
+        return sb.toString();
+    }
+
+    private int minDigitsNeeded(int[] req) {
+        int c2 = req[2], c3 = req[3], c5 = req[5], c7 = req[7];
+        int count8 = c2 / 3; c2 %= 3;
+        int count9 = c3 / 2; c3 %= 2;
+        
+        int count6 = 0, count4 = 0;
+        if (c2 == 2 && c3 == 1) {
+            count6 = 1; c2 = 1; c3 = 0;
+        } else {
+            count4 = c2 / 2; c2 %= 2;
+            if (c2 > 0 && c3 > 0) { count6 = 1; c2--; c3--; }
+        }
+        
+        return count8 + count9 + count4 + count6 + c2 + c3 + c5 + c7;
+    }
+
+    private String constructSuffix(int[] req, int len) {
+        int c2 = req[2], c3 = req[3], c5 = req[5], c7 = req[7];
+        int[] counts = new int[10];
+
+        counts[8] = c2 / 3; c2 %= 3;
+        counts[9] = c3 / 2; c3 %= 2;
+
+        // Prefer 2 and 6 over 3 and 4 when c2 == 2 and c3 == 1
+        if (c2 == 2 && c3 == 1) {
+            counts[6] = 1; c2 = 1; c3 = 0;
+        } else {
+            counts[4] = c2 / 2; c2 %= 2;
+            if (c2 > 0 && c3 > 0) { counts[6] = 1; c2--; c3--; }
+        }
+
+        counts[2] = c2; 
+        counts[3] = c3; 
+        counts[5] = c5; 
+        counts[7] = c7;
+
+        int totalNeeded = 0;
+        for (int d = 2; d <= 9; d++) totalNeeded += counts[d];
+        counts[1] = len - totalNeeded;
+
+        StringBuilder sb = new StringBuilder();
+        for (int d = 1; d <= 9; d++) {
+            while (counts[d]-- > 0) sb.append(d);
+        }
+        return sb.toString();
+    }
+}
